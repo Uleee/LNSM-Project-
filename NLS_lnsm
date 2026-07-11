@@ -1,0 +1,89 @@
+function hist = NLS_lnsm(N,bs_pos, mu, toa_los, aoa_sorted, iter,tol ,TYPE)
+
+antenna1_tilt_az = -90; 
+antenna1_tilt_el = -30; 
+antenna2_tilt_az = 90; 
+antenna2_tilt_el =-30; 
+switch TYPE
+    case 'TOA'
+
+    u = 3 * rand(3, 1); 
+
+    for i=1:N
+        j=0;
+        delta_u = inf;
+    hist(i,:) = u; 
+    while (j<iter || norm(delta_u)>tol)
+    [H,d] = jacobian_comp(u,bs_pos,TYPE);
+    rho = toa_los(i) - d; 
+    delta_u = (H'*H)\H'*rho;
+    u = u+mu*delta_u; 
+    j = j+1;
+
+    end
+
+    end 
+
+    case 'AOA'
+    u = 3 * rand(3, 1); 
+    for i=1:N
+        j=0;
+        delta_u = inf;
+        hist(i,:) = u; 
+        while (j<iter || norm(delta_u)>tol)
+    deltax = u(1,1)-bs_pos(1,1); 
+    deltay = u(2,1)-bs_pos(2,1); 
+    deltaz = u(3,1)-bs_pos(3,1); 
+    r = sqrt(deltax^2 + deltay^2); 
+    az = atan2(deltay,deltax); 
+    el = atan2(deltaz,r); 
+    if i <=59
+    az_deg = rad2deg(az)-antenna1_tilt_az;
+    el_deg = rad2deg(el)-antenna1_tilt_el;
+    else 
+    az_deg = rad2deg(az)-antenna2_tilt_az;
+    el_deg = rad2deg(el)-antenna2_tilt_el;
+    end
+    angle_i = [az_deg;el_deg];
+    rho = aoa_sorted(:,i)-angle_i; 
+    [H,d] = jacobian_comp(u,bs_pos,TYPE); 
+    delta_u = (H'*H)\H'*rho;
+    u = u+mu*delta_u; 
+    j=j+1;
+        end 
+    end  
+
+    case 'TOAAOA'
+    u = 3 * rand(3, 1); 
+    for i=1:N
+        j=0;
+        delta_u = inf;
+    hist(i,:) = u;
+    while (j<iter || norm(delta_u)>tol)
+    [H,d] = jacobian_comp(u,bs_pos,TYPE); 
+    deltax = u(1,1)-bs_pos(1,1); 
+    deltay = u(2,1)-bs_pos(2,1); 
+    deltaz = u(3,1)-bs_pos(3,1); 
+    r = sqrt(deltax^2 + deltay^2); 
+    az = atan2(deltay,deltax); 
+    el = atan2(deltaz,r); 
+    if i <=59
+    az_deg = rad2deg(az)-antenna1_tilt_az;
+    el_deg = rad2deg(el)-antenna1_tilt_el;
+    else 
+    az_deg = rad2deg(az)-antenna2_tilt_az;
+    el_deg = rad2deg(el)-antenna2_tilt_el;
+    end   
+    angle_i = [az_deg;el_deg];
+    rho_aoa = aoa_sorted(:,i)-angle_i; 
+    rho_toa = toa_los(i) - d; 
+    rho =[rho_toa;rho_aoa]; 
+    delta_u = (H'*H)\H'*rho;
+    u = u+mu*delta_u; 
+    j=j+1;
+    end 
+    end
+
+end
+
+end
