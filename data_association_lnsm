@@ -1,0 +1,54 @@
+function [toa_sorted,aoa_sorted,toa_error,aoa_error]=data_association_lnsm(N,toa_hat,aoa_hat,toa,aoa,sigma_toa,sigma_aoa_az,sigma_aoa_el)
+max_path=5; 
+toa_sorted=NaN(1,max_path,N); 
+aoa_sorted=NaN(2,max_path,N);
+aoa_error=NaN(2,max_path,N); 
+toa_error=NaN(1,max_path,N); 
+
+for i = 1:N 
+
+    toa_meas=toa_hat{i};
+    toa_true=toa{i}; 
+    aoa_meas=aoa_hat{i};
+    aoa_true=aoa{i};
+
+    N_toa_active = numel(toa_meas); 
+
+    N_toa_true_active = numel(toa_true); 
+
+    mat_cost = inf(N_toa_active, N_toa_true_active);
+
+for ii = 1:N_toa_active
+    for jj=1:N_toa_true_active
+
+    e=(toa_meas(ii)-toa_true(jj))/sigma_toa;
+
+    e_az = (mod((aoa_meas(1, ii) - aoa_true(1, jj))+180,360)-180)/sigma_aoa_az;
+
+    e_el= (mod((aoa_meas(2, ii) - aoa_true(2, jj))+180,360)-180)/sigma_aoa_el;
+
+    mat_cost(ii,jj)=e^2+e_az^2+e_el^2;
+    
+    end 
+end 
+
+[matches] = matchpairs(mat_cost,1000); % Linear Programming
+% 1000-cost of non-assignment 
+% [assignments,unassignedrows,unassignedcolumns] = assignjv(costmatrix,costofnonassignment)
+
+for j = 1:size(matches, 1)
+    idx_meas=matches(j,1);
+    idx_true=matches(j,2);
+    toa_sorted(1,idx_true,i)=toa_meas(1,idx_meas);
+    aoa_sorted(:,idx_true,i)=aoa_meas(:,idx_meas);
+    toa_error(1, idx_true, i) = abs(toa_meas(idx_meas) - toa_true(idx_true));
+    d_az = mod((aoa_meas(1, idx_meas) - aoa_true(1, idx_true)) + 180, 360) - 180;
+    d_el = mod((aoa_meas(2, idx_meas) - aoa_true(2, idx_true)) + 180, 360) - 180;
+    aoa_error(1, idx_true, i) = d_az; 
+    aoa_error(2, idx_true, i) = d_el; 
+end 
+end 
+
+
+
+end 
